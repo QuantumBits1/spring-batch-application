@@ -8,6 +8,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.stereotype.Component;
 
+import java.util.Random;
+
 @Component
 public class EmployeeProcessor implements ItemProcessor<EmployeeDTO, Employee> {
 
@@ -20,7 +22,7 @@ public class EmployeeProcessor implements ItemProcessor<EmployeeDTO, Employee> {
         if(!isValid(employeeDTO)) { return null; }
 
         Employee employee = new Employee();
-        employee.setEmployeeId(employeeDTO.getEmployeeId());
+        employee.setEmployeeId(employeeDTO.getEmployeeId() + new Random().nextInt(10000000));
         employee.setFirstName(employeeDTO.getFirstName());
         employee.setLastName(employeeDTO.getLastName());
         employee.setEmail(employeeDTO.getEmail());

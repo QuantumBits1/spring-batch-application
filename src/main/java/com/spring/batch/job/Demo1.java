@@ -1,19 +1,27 @@
 package com.spring.batch.job;
 
 import com.spring.batch.dto.EmployeeDTO;
+import com.spring.batch.mapper.EmployeeDBRowMapper;
 import com.spring.batch.mapper.EmployeeFileRowMapper;
 import com.spring.batch.model.Employee;
 import com.spring.batch.processor.EmployeeProcessor;
+import com.spring.batch.writer.EmailSenderWriter;
 import com.spring.batch.writer.EmployeeDBWriter;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepScope;
+import org.springframework.batch.item.ItemStreamReader;
+import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.database.BeanPropertyItemSqlParameterSourceProvider;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
+import org.springframework.batch.item.database.JdbcCursorItemReader;
 import org.springframework.batch.item.file.FlatFileItemReader;
+import org.springframework.batch.item.file.FlatFileItemWriter;
 import org.springframework.batch.item.file.mapping.DefaultLineMapper;
+import org.springframework.batch.item.file.transform.BeanWrapperFieldExtractor;
+import org.springframework.batch.item.file.transform.DelimitedLineAggregator;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -21,13 +29,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.core.task.TaskExecutor;
-import org.springframework.core.task.support.TaskExecutorAdapter;
 
 import javax.sql.DataSource;
-import javax.xml.crypto.Data;
 
 @Configuration
 public class Demo1 {
@@ -37,6 +44,7 @@ public class Demo1 {
     private EmployeeProcessor employeeProcessor;
     private EmployeeDBWriter employeeDBWriter;
     private DataSource dataSource;
+    private Resource outputFileResource = new FileSystemResource("output/employee_output.csv");
 
     @Autowired
     public Demo1(JobBuilderFactory jobBuilderFactory, StepBuilderFactory stepBuilderFactory,
@@ -53,17 +61,28 @@ public class Demo1 {
     public Job demo1Job() throws Exception {
         return this.jobBuilderFactory.get("demo1")
                 .start(step1Demo1())
+                .next(step2Demo1())
                 .build();
     }
 
     @Bean
     public Step step1Demo1() throws Exception {
         return this.stepBuilderFactory.get("step1")
-                .<EmployeeDTO, Employee>chunk(5)
+                .<EmployeeDTO, Employee>chunk(10)
                 .reader(employeeFileReader())
+                .writer(employeeDBWriterDefault())
                 .processor(employeeProcessor)  //optional
-                .writer(employeeDBWriter)
                 .taskExecutor(taskExecutor())
+                .build();
+    }
+
+    @Bean
+    public Step step2Demo1() throws Exception {
+        return this.stepBuilderFactory.get("step2")
+                .<Employee, EmployeeDTO>chunk(10)
+                .reader(employeeDBReader())
+//                .writer(employeeFileWriter())
+                .writer(emailSenderWriter())
                 .build();
     }
 
@@ -96,6 +115,37 @@ public class Demo1 {
                 "values (:employeeId, :firstName, :lastName, :email, :age)");
         itemWriter.setItemSqlParameterSourceProvider(new BeanPropertyItemSqlParameterSourceProvider<>());
         return itemWriter;
+    }
+
+    @Bean
+    public ItemStreamReader<Employee> employeeDBReader() {
+        JdbcCursorItemReader<Employee> reader = new JdbcCursorItemReader<>();
+        reader.setDataSource(dataSource);
+        reader.setSql("select * from employee");
+        reader.setRowMapper(new EmployeeDBRowMapper());
+        return reader;
+    }
+
+    @Bean
+    public ItemWriter<EmployeeDTO> employeeFileWriter() throws Exception {
+        FlatFileItemWriter<EmployeeDTO> writer = new FlatFileItemWriter<>();
+        writer.setResource(outputFileResource);
+        writer.setLineAggregator(new DelimitedLineAggregator<EmployeeDTO>() {
+            {
+                setFieldExtractor(new BeanWrapperFieldExtractor<EmployeeDTO>() {
+                    {
+                        setNames(new String[]{"employeeId", "firstName", "lastName", "email", "age"});
+                    }
+                });
+            }
+        });
+        writer.setShouldDeleteIfExists(true);
+        return writer;
+    }
+
+    @Bean
+    EmailSenderWriter emailSenderWriter() {
+        return new EmailSenderWriter();
     }
 
     @Bean
