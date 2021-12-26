@@ -22,8 +22,12 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.core.task.TaskExecutor;
+import org.springframework.core.task.support.TaskExecutorAdapter;
 
 import javax.sql.DataSource;
+import javax.xml.crypto.Data;
 
 @Configuration
 public class Demo1 {
@@ -32,14 +36,16 @@ public class Demo1 {
     private StepBuilderFactory stepBuilderFactory;
     private EmployeeProcessor employeeProcessor;
     private EmployeeDBWriter employeeDBWriter;
+    private DataSource dataSource;
 
     @Autowired
     public Demo1(JobBuilderFactory jobBuilderFactory, StepBuilderFactory stepBuilderFactory,
-                 EmployeeProcessor employeeProcessor, EmployeeDBWriter employeeDBWriter){
+                 EmployeeProcessor employeeProcessor, EmployeeDBWriter employeeDBWriter, DataSource dataSource){
         this.jobBuilderFactory = jobBuilderFactory;
         this.stepBuilderFactory = stepBuilderFactory;
         this.employeeProcessor = employeeProcessor;
         this.employeeDBWriter = employeeDBWriter;
+        this.dataSource = dataSource;
     }
 
     @Qualifier(value = "demo1")
@@ -57,6 +63,7 @@ public class Demo1 {
                 .reader(employeeFileReader())
                 .processor(employeeProcessor)  //optional
                 .writer(employeeDBWriter)
+                .taskExecutor(taskExecutor())
                 .build();
     }
 
@@ -81,4 +88,20 @@ public class Demo1 {
         return reader;
     }
 
+    @Bean
+    public JdbcBatchItemWriter<Employee> employeeDBWriterDefault() {
+        JdbcBatchItemWriter<Employee> itemWriter = new JdbcBatchItemWriter<>();
+        itemWriter.setDataSource(dataSource);
+        itemWriter.setSql("insert into employee (employee_id, first_name, last_name, email, age) " +
+                "values (:employeeId, :firstName, :lastName, :email, :age)");
+        itemWriter.setItemSqlParameterSourceProvider(new BeanPropertyItemSqlParameterSourceProvider<>());
+        return itemWriter;
+    }
+
+    @Bean
+    public TaskExecutor taskExecutor() {
+        SimpleAsyncTaskExecutor simpleAsyncTaskExecutor = new SimpleAsyncTaskExecutor();
+        simpleAsyncTaskExecutor.setConcurrencyLimit(5);
+        return simpleAsyncTaskExecutor;
+    }
 }
