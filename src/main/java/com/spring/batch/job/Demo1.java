@@ -54,7 +54,7 @@ public class Demo1 {
     public Step step1Demo1() throws Exception {
         return this.stepBuilderFactory.get("step1")
                 .<EmployeeDTO, Employee>chunk(5)
-                .reader(employeeReader())
+                .reader(employeeFileReader())
                 .processor(employeeProcessor)  //optional
                 .writer(employeeDBWriter)
                 .build();
@@ -68,7 +68,7 @@ public class Demo1 {
 
     @Bean
     @StepScope
-    public FlatFileItemReader<EmployeeDTO> employeeReader() throws Exception {
+    public FlatFileItemReader<EmployeeDTO> employeeFileReader() throws Exception {
         FlatFileItemReader<EmployeeDTO> reader = new FlatFileItemReader<>();
         reader.setResource(inputFileResource(null));
         reader.setLineMapper(new DefaultLineMapper<EmployeeDTO>() {{
