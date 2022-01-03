@@ -158,9 +158,4 @@ public class Demo1 {
         simpleAsyncTaskExecutor.setConcurrencyLimit(5);
         return simpleAsyncTaskExecutor;
     }
-
-    @Bean
-    public ExecutionContext executionContext() {
-        return new ExecutionContext();
-    }
 }

@@ -5,6 +5,7 @@ import com.spring.batch.model.Employee;
 import com.spring.batch.writer.EmployeeDBWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.stereotype.Component;
 
@@ -14,6 +15,11 @@ import java.util.Random;
 public class EmployeeProcessor implements ItemProcessor<EmployeeDTO, Employee> {
 
     private static final Logger logger = LoggerFactory.getLogger(EmployeeDBWriter.class);
+    private ExecutionContext executionContext;
+
+    public EmployeeProcessor(ExecutionContext executionContext) {
+        this.executionContext = executionContext;
+    }
 
     @Override
     public Employee process(EmployeeDTO employeeDTO) throws Exception {
@@ -22,7 +28,7 @@ public class EmployeeProcessor implements ItemProcessor<EmployeeDTO, Employee> {
         if(!isValid(employeeDTO)) { return null; }
 
         Employee employee = new Employee();
-        employee.setEmployeeId(employeeDTO.getEmployeeId() + new Random().nextInt(10000000));
+        employee.setEmployeeId(employeeDTO.getEmployeeId() + executionContext.getString("customFileName"));
         employee.setFirstName(employeeDTO.getFirstName());
         employee.setLastName(employeeDTO.getLastName());
         employee.setEmail(employeeDTO.getEmail());
