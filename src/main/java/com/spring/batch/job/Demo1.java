@@ -12,6 +12,7 @@ import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepScope;
+import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamReader;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.database.BeanPropertyItemSqlParameterSourceProvider;
@@ -42,9 +43,9 @@ public class Demo1 {
     private JobBuilderFactory jobBuilderFactory;
     private StepBuilderFactory stepBuilderFactory;
     private EmployeeProcessor employeeProcessor;
-    private EmployeeDBWriter employeeDBWriter;
+    //private EmployeeDBWriter employeeDBWriter;
     private DataSource dataSource;
-    private Resource outputFileResource = new FileSystemResource("output/employee_output.csv");
+    //private Resource outputFileResource = new FileSystemResource("output/employee_output.csv");
 
     @Autowired
     public Demo1(JobBuilderFactory jobBuilderFactory, StepBuilderFactory stepBuilderFactory,
@@ -52,7 +53,7 @@ public class Demo1 {
         this.jobBuilderFactory = jobBuilderFactory;
         this.stepBuilderFactory = stepBuilderFactory;
         this.employeeProcessor = employeeProcessor;
-        this.employeeDBWriter = employeeDBWriter;
+        //this.employeeDBWriter = employeeDBWriter;
         this.dataSource = dataSource;
     }
 
@@ -61,14 +62,14 @@ public class Demo1 {
     public Job demo1Job() throws Exception {
         return this.jobBuilderFactory.get("demo1")
                 .start(step1Demo1())
-                .next(step2Demo1())
+                //.next(step2Demo1())  //use this for multistep
                 .build();
     }
 
     @Bean
     public Step step1Demo1() throws Exception {
         return this.stepBuilderFactory.get("step1")
-                .<EmployeeDTO, Employee>chunk(10)
+                .<EmployeeDTO, Employee>chunk(5)
                 .reader(employeeFileReader())
                 .writer(employeeDBWriterDefault())
                 .processor(employeeProcessor)  //optional
@@ -76,7 +77,8 @@ public class Demo1 {
                 .build();
     }
 
-    @Bean
+    //Use this when need multistep
+    /*@Bean
     public Step step2Demo1() throws Exception {
         return this.stepBuilderFactory.get("step2")
                 .<Employee, EmployeeDTO>chunk(10)
@@ -84,7 +86,7 @@ public class Demo1 {
 //                .writer(employeeFileWriter())
                 .writer(emailSenderWriter())
                 .build();
-    }
+    }*/
 
     @Bean
     @StepScope
@@ -117,16 +119,18 @@ public class Demo1 {
         return itemWriter;
     }
 
-    @Bean
+    //Use this for multiste
+    /*@Bean
     public ItemStreamReader<Employee> employeeDBReader() {
         JdbcCursorItemReader<Employee> reader = new JdbcCursorItemReader<>();
         reader.setDataSource(dataSource);
         reader.setSql("select * from employee");
         reader.setRowMapper(new EmployeeDBRowMapper());
         return reader;
-    }
+    }*/
 
-    @Bean
+    //Use this for multistep
+    /*@Bean
     public ItemWriter<EmployeeDTO> employeeFileWriter() throws Exception {
         FlatFileItemWriter<EmployeeDTO> writer = new FlatFileItemWriter<>();
         writer.setResource(outputFileResource);
@@ -141,7 +145,7 @@ public class Demo1 {
         });
         writer.setShouldDeleteIfExists(true);
         return writer;
-    }
+    }*/
 
     @Bean
     EmailSenderWriter emailSenderWriter() {
@@ -153,5 +157,10 @@ public class Demo1 {
         SimpleAsyncTaskExecutor simpleAsyncTaskExecutor = new SimpleAsyncTaskExecutor();
         simpleAsyncTaskExecutor.setConcurrencyLimit(5);
         return simpleAsyncTaskExecutor;
+    }
+
+    @Bean
+    public ExecutionContext executionContext() {
+        return new ExecutionContext();
     }
 }
