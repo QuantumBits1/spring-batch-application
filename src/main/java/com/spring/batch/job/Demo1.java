@@ -39,12 +39,11 @@ import javax.sql.DataSource;
 
 @Configuration
 public class Demo1 {
-
     private JobBuilderFactory jobBuilderFactory;
     private StepBuilderFactory stepBuilderFactory;
     private EmployeeProcessor employeeProcessor;
-    //private EmployeeDBWriter employeeDBWriter;
     private DataSource dataSource;
+    //private EmployeeDBWriter employeeDBWriter;
     //private Resource outputFileResource = new FileSystemResource("output/employee_output.csv");
 
     @Autowired
@@ -53,8 +52,8 @@ public class Demo1 {
         this.jobBuilderFactory = jobBuilderFactory;
         this.stepBuilderFactory = stepBuilderFactory;
         this.employeeProcessor = employeeProcessor;
-        //this.employeeDBWriter = employeeDBWriter;
         this.dataSource = dataSource;
+        //this.employeeDBWriter = employeeDBWriter;
     }
 
     @Qualifier(value = "demo1")
@@ -69,11 +68,12 @@ public class Demo1 {
     @Bean
     public Step step1Demo1() throws Exception {
         return this.stepBuilderFactory.get("step1")
-                .<EmployeeDTO, Employee>chunk(5)
+                .<EmployeeDTO, Employee>chunk(1)
                 .reader(employeeFileReader())
                 .writer(employeeDBWriterDefault())
                 .processor(employeeProcessor)  //optional
-                .taskExecutor(taskExecutor())
+                .faultTolerant().skipPolicy(jobSkipPolicy())
+                //.taskExecutor(taskExecutor())
                 .build();
     }
 
@@ -157,5 +157,10 @@ public class Demo1 {
         SimpleAsyncTaskExecutor simpleAsyncTaskExecutor = new SimpleAsyncTaskExecutor();
         simpleAsyncTaskExecutor.setConcurrencyLimit(5);
         return simpleAsyncTaskExecutor;
+    }
+
+    @Bean
+    public JobSkipPolicy jobSkipPolicy() {
+        return new JobSkipPolicy();
     }
 }

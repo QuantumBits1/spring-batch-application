@@ -13,11 +13,7 @@ public class EmployeeFileRowMapper implements FieldSetMapper<EmployeeDTO> {
         employee.setFirstName(fieldSet.readString("firstName"));
         employee.setLastName(fieldSet.readString("lastName"));
         employee.setEmail(fieldSet.readString("email"));
-        try {
-            employee.setAge(fieldSet.readInt("age"));
-        } catch (Exception e) {
-
-        }
+        employee.setAge(fieldSet.readInt("age"));
         return employee;
     }
 
